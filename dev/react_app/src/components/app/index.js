@@ -2,6 +2,7 @@ import React from "react";
 
 import Table from "./table/index"
 import View from "./view/index";
+import Form from "./form/index"
 
 import {
     BrowserRouter as Router,
@@ -11,11 +12,7 @@ import {
 } from "react-router-dom"
 
 
-const tableValues = [
-    ['101', 'Tony Stark', 'Iron Man', 'Avengers'],
-    ['102', 'Peter Parker', 'Spider Man', 'Avengers'],
-    ['103', 'Bruce Mayne', 'Bat Man', 'Justice League']
-];
+
 
 const tableHeaders=['Id', 'Name', 'Alias', 'Team'];
 
@@ -23,23 +20,57 @@ const tableHeaders=['Id', 'Name', 'Alias', 'Team'];
 
 class App extends React.Component {
     state = {
-        selectedId: -1,
-        selectedRecord: {}
+        tableValues : []
+       
     }
 
+    constructor(props) {
+        super(props);
+        this.createRecord = this.createRecord.bind(this)
+    }
 
-     onViewClick(Id) {
-        console.log(Id)
-        const data = tableValues.find(val => val[0] === Id)
-        const newRecord = {
-            name: data[1],
-            alias: data[2],
-            team: data[3]
-        }
-        this.setState({
-            selectedId: Id,
-            selectedRecord: newRecord
-        })
+    fetchList() {
+        let self=this;
+        const request = new Request('/heroes', 
+        {method: 'GET', headers: {"Content-Type": "application/json"}}
+        );
+        fetch(request)
+        .then(res => res.json())
+        .then(function(data) {
+            self.setState({'tableValues':data});
+
+        });
+
+    }
+
+    componentDidMount() {
+        this.fetchList()
+    }
+
+    createRecord (name, alias, team) {
+        /*console.log(name, alias, team)
+        const ID = (Math.random() *100).toString()
+        const newRecord =[ID, name, alias, team]
+        const newTableValues = this.state.tableValues.map(val => val)
+        newTableValues.push(newRecord)
+        this.setState({tableValues: newTableValues})*/
+        const self= this;
+        var body = {
+            name: name,
+            alias: alias,
+            team:team
+        };
+        var request = new Request('/heroes', {
+            method: 'POST',
+            body: JSON.stringify(body),
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        fetch(request)
+        .then(function() {
+                self.fetchList()
+        });
     }
 
     render() {
@@ -48,24 +79,18 @@ class App extends React.Component {
                 <Switch>
                     <Route exact path="/List" render={(props) => {
                         return <Table 
-                                    values={tableValues}
+                                    values={this.state.tableValues}
                                     headers={tableHeaders}
                                     history={props.history}
                                    />
                     }}/>
-                    <Route exact path="/view/:Id" render={(props) => {
-                        console.log(props)
-                        const data = tableValues.find(val => val[0] === props.match.params.Id)
-                        const newRecord = {
-                            name: data[1],
-                            alias: data[2],
-                            team: data[3]
-                        }
-                        return <View 
-                            name={newRecord.name}
-                            alias={newRecord.alias} 
-                            team={newRecord.team}/>
-                    }}/>
+
+                    <Route exact path="/view/:Id" component={View}/>
+
+                    <Route exact path="/create" render={(props) => {
+                        return <Form history ={props.history} formSubmitCallback={this.createRecord}/>
+
+                    }}/>    
 
                     <Redirect to="/List" />
                 </Switch>           
